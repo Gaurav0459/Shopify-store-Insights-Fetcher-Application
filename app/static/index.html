@@ -3,37 +3,191 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Shopify Store Insights Fetcher</title>
+    <title>ShopInsight - Shopify Store Analyzer</title>
+    <link rel="icon" type="image/png" href="/static/img/favicon.png">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
+        :root {
+            --primary-color: #5d4fff;
+            --secondary-color: #7b68ee;
+            --accent-color: #ff6b6b;
+            --light-bg: #f8f9fa;
+            --dark-text: #343a40;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f7ff;
+            color: var(--dark-text);
+        }
+        
+        .navbar {
+            background-color: var(--primary-color);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .navbar-brand {
+            font-weight: 700;
+            color: white !important;
+        }
+        
+        .card {
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            border: none;
+            margin-bottom: 25px;
+        }
+        
+        .card-header {
+            background-color: white;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+            font-weight: 600;
+            border-radius: 10px 10px 0 0 !important;
+        }
+        
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+        }
+        
+        .btn-primary:hover {
+            background-color: var(--secondary-color);
+            border-color: var(--secondary-color);
+        }
+        
         .result-container {
             max-height: 500px;
             overflow-y: auto;
+            border-radius: 5px;
         }
+        
         .loading {
             display: none;
+        }
+        
+        .feature-icon {
+            background-color: var(--light-bg);
+            color: var(--primary-color);
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 15px;
+            font-size: 20px;
+        }
+        
+        .form-control:focus {
+            border-color: var(--secondary-color);
+            box-shadow: 0 0 0 0.25rem rgba(93, 79, 255, 0.25);
+        }
+        
+        /* Custom animation for loading */
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        .loading .spinner-border {
+            animation: pulse 1.5s infinite;
+        }
+        
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 10px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+        
+        /* Footer */
+        .footer {
+            margin-top: 30px;
+            padding: 20px 0;
+            text-align: center;
+            font-size: 14px;
+            color: #6c757d;
         }
     </style>
 </head>
 <body>
-    <div class="container mt-5">
-        <h1 class="mb-4">Shopify Store Insights Fetcher</h1>
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/"><i class="fas fa-chart-line me-2"></i>ShopInsight</a>
+        </div>
+    </nav>
+    
+    <div class="container mt-4">
+        <div class="row mb-4">
+            <div class="col-12 text-center">
+                <h1 class="display-5 fw-bold">Shopify Store Insights Analyzer</h1>
+                <p class="lead text-muted">Extract valuable data from any Shopify store without using the official API</p>
+            </div>
+        </div>
+        
+        <div class="row mb-4">
+            <div class="col-md-4 mb-3">
+                <div class="card h-100 text-center p-3">
+                    <div class="feature-icon mx-auto">
+                        <i class="fas fa-shopping-cart"></i>
+                    </div>
+                    <h5>Product Analysis</h5>
+                    <p class="text-muted">Extract complete product catalog and identify hero products</p>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="card h-100 text-center p-3">
+                    <div class="feature-icon mx-auto">
+                        <i class="fas fa-file-alt"></i>
+                    </div>
+                    <h5>Policy Extraction</h5>
+                    <p class="text-muted">Get privacy, return and refund policies automatically</p>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="card h-100 text-center p-3">
+                    <div class="feature-icon mx-auto">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <h5>Competitor Analysis</h5>
+                    <p class="text-muted">Identify and analyze competitor stores</p>
+                </div>
+            </div>
+        </div>
         
         <div class="card mb-4">
-            <div class="card-header">
-                <h5>Get Store Insights</h5>
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-search me-2"></i>Analyze Store</h5>
+                <span class="badge bg-primary">Fast & Easy</span>
             </div>
             <div class="card-body">
                 <form id="insightsForm">
                     <div class="mb-3">
                         <label for="websiteUrl" class="form-label">Shopify Store URL</label>
-                        <input type="url" class="form-control" id="websiteUrl" placeholder="https://example-store.myshopify.com" required>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-globe"></i></span>
+                            <input type="url" class="form-control" id="websiteUrl" placeholder="memy.co.in or hairoriginals.com" required>
+                        </div>
                         <div class="form-text">Enter a Shopify store URL to fetch insights</div>
                     </div>
                     
                     <div class="mb-3 form-check">
                         <input type="checkbox" class="form-check-input" id="includeCompetitors">
-                        <label class="form-check-label" for="includeCompetitors">Include Competitor Analysis</label>
+                        <label class="form-check-label" for="includeCompetitors"><i class="fas fa-chart-pie me-1"></i>Include Competitor Analysis</label>
                     </div>
                     
                     <div class="mb-3" id="competitorLimitContainer" style="display: none;">
@@ -47,28 +201,38 @@
                         </select>
                     </div>
                     
-                    <button type="submit" class="btn btn-primary">Fetch Insights</button>
-                    <div class="loading mt-3">
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg"><i class="fas fa-bolt me-2"></i>Analyze Store</button>
+                    </div>
+                    <div class="loading mt-3 text-center">
                         <div class="spinner-border text-primary" role="status">
                             <span class="visually-hidden">Loading...</span>
                         </div>
-                        <span class="ms-2">Fetching insights... This may take a minute.</span>
+                        <p class="mt-2">Analyzing store data... This may take a minute.</p>
                     </div>
                 </form>
             </div>
         </div>
         
         <div class="card">
-            <div class="card-header">
-                <h5>Results</h5>
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Analysis Results</h5>
+                <button id="copyBtn" class="btn btn-sm btn-outline-primary" style="display: none;"><i class="fas fa-copy me-1"></i>Copy JSON</button>
             </div>
             <div class="card-body">
                 <div class="result-container">
-                    <pre id="results" class="bg-light p-3 rounded">No results yet. Submit the form to fetch insights.</pre>
+                    <pre id="results" class="bg-light p-3 rounded">No results yet. Submit the form to analyze a Shopify store.</pre>
                 </div>
             </div>
         </div>
     </div>
+    
+    <footer class="footer">
+        <div class="container">
+            <p>Created by Gaurav | DeepSolv Assignment 2023</p>
+            <p class="text-muted">A tool for extracting insights from Shopify stores without using the official API</p>
+        </div>
+    </footer>
     
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -77,10 +241,26 @@
             const competitorLimitContainer = document.getElementById('competitorLimitContainer');
             const resultsContainer = document.getElementById('results');
             const loading = document.querySelector('.loading');
+            const copyBtn = document.getElementById('copyBtn');
             
             // Toggle competitor limit visibility
             includeCompetitors.addEventListener('change', function() {
                 competitorLimitContainer.style.display = this.checked ? 'block' : 'none';
+            });
+            
+            // Copy results to clipboard
+            copyBtn.addEventListener('click', function() {
+                navigator.clipboard.writeText(resultsContainer.textContent)
+                    .then(() => {
+                        const originalText = copyBtn.innerHTML;
+                        copyBtn.innerHTML = '<i class="fas fa-check me-1"></i>Copied!';
+                        setTimeout(() => {
+                            copyBtn.innerHTML = originalText;
+                        }, 2000);
+                    })
+                    .catch(err => {
+                        console.error('Failed to copy: ', err);
+                    });
             });
             
             // Handle form submission
@@ -93,7 +273,14 @@
                 
                 // Show loading indicator
                 loading.style.display = 'block';
-                resultsContainer.textContent = 'Fetching insights...';
+                copyBtn.style.display = 'none';
+                resultsContainer.textContent = 'Analyzing store data...';
+                
+                // Add http:// if not present
+                let formattedUrl = websiteUrl;
+                if (!formattedUrl.startsWith('http://') && !formattedUrl.startsWith('https://')) {
+                    formattedUrl = 'https://' + formattedUrl;
+                }
                 
                 try {
                     let endpoint = '/api/v1/insights';
@@ -107,7 +294,7 @@
                             'Content-Type': 'application/json'
                         },
                         body: JSON.stringify({
-                            website_url: websiteUrl
+                            website_url: formattedUrl
                         })
                     });
                     
@@ -118,6 +305,11 @@
                     
                     const data = await response.json();
                     resultsContainer.textContent = JSON.stringify(data, null, 2);
+                    copyBtn.style.display = 'block';
+                    
+                    // Scroll to results
+                    document.querySelector('.result-container').scrollIntoView({ behavior: 'smooth' });
+                    
                 } catch (error) {
                     resultsContainer.textContent = `Error: ${error.message}`;
                 } finally {
@@ -125,6 +317,17 @@
                     loading.style.display = 'none';
                 }
             });
+            
+            // Example URLs
+            const exampleUrls = [
+                'memy.co.in',
+                'hairoriginals.com',
+                'colourpop.com'
+            ];
+            
+            // Set a random example URL as placeholder
+            const randomExample = exampleUrls[Math.floor(Math.random() * exampleUrls.length)];
+            document.getElementById('websiteUrl').placeholder = randomExample;
         });
     </script>
     

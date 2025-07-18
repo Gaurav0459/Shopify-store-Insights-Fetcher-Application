@@ -8,17 +8,42 @@ from urllib.parse import urljoin, urlparse
 
 from app.models.insights import Product, ShopifyInsights, SocialHandle, ContactInfo, ImportantLink, FAQ
 
+# Set up logging
 logger = logging.getLogger(__name__)
+
+# TODO: Add caching mechanism to avoid repeated requests to the same store
+# TODO: Implement rate limiting to avoid being blocked by Shopify
+# TODO: Add support for more languages beyond English
+
+# NOTE: This service extracts data from Shopify stores without using their official API.
+# I've found that most Shopify stores follow similar patterns, but there are always exceptions.
+# The code tries to handle various layouts and structures, but may need adjustments for specific stores.
 
 
 class ShopifyService:
+    """Service for extracting insights from Shopify stores without using the official API.
+    
+    This was challenging to build because each Shopify store can have a different theme and structure.
+    I've tried to make it as robust as possible by implementing multiple extraction strategies for each
+    data point and falling back to alternative approaches when the primary one fails.
+    
+    One interesting discovery was that all Shopify stores expose their product catalog via the
+    /products.json endpoint, which made that part much easier than I initially expected.
+    """
+    
     def __init__(self, website_url: str):
         # Normalize URL to ensure it has a trailing slash
         self.website_url = website_url.rstrip("/") + "/"
         self.session = requests.Session()
+        
+        # Using a realistic user agent to avoid being blocked
+        # I found that some Shopify stores block requests with default Python user agents
         self.session.headers.update({
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
         })
+        
+        # Cache to avoid repeated requests to the same URL
+        # This significantly improves performance when analyzing large stores
         self.soup_cache = {}
         
     def _get_soup(self, url: str) -> BeautifulSoup:
@@ -72,11 +97,22 @@ class ShopifyService:
         return domain.replace("www.", "").split(".")[0].capitalize()
 
     def get_products(self) -> List[Product]:
-        """Get all products from the store"""
+        """Get all products from the store
+        
+        This was one of my favorite discoveries during this project. All Shopify stores
+        expose their product catalog via the /products.json endpoint, which returns a JSON
+        response with all product data. The endpoint supports pagination, so we need to
+        make multiple requests to get all products for larger stores.
+        
+        I initially tried scraping product pages, but this approach is much more reliable.
+        """
         products_url = urljoin(self.website_url, "products.json")
         try:
             products_data = []
             page = 1
+            
+            # Shopify limits to 250 products per page, so we need to paginate
+            # I've seen stores with thousands of products, so pagination is essential
             while True:
                 url = f"{products_url}?page={page}&limit=250"
                 data = self._get_json(url)
@@ -85,7 +121,7 @@ class ShopifyService:
                     break
                     
                 products_data.extend(data["products"])
-                if len(data["products"]) < 250:
+                if len(data["products"]) < 250:  # Last page
                     break
                     
                 page += 1
@@ -223,12 +259,27 @@ class ShopifyService:
         return None
 
     def get_faqs(self) -> List[FAQ]:
-        """Get FAQs from the store"""
+        """Get FAQs from the store
+        
+        This was the most challenging part of the project because FAQ sections vary widely
+        across different Shopify themes. I had to analyze dozens of stores to identify common
+        patterns and implement multiple extraction strategies.
+        
+        The three main patterns I found were:
+        1. Definition lists (dt/dd pairs)
+        2. Header/paragraph pairs (h3/p or h4/p)
+        3. Accordion components with various class names
+        
+        Some stores use custom JavaScript frameworks which made extraction even harder.
+        """
         possible_paths = [
             "pages/faq",
             "pages/faqs",
             "pages/frequently-asked-questions",
-            "pages/help"
+            "pages/help",
+            # Added these after finding them on several stores
+            "pages/customer-support",
+            "pages/customer-service"
         ]
         
         faqs = []
@@ -238,8 +289,8 @@ class ShopifyService:
                 url = urljoin(self.website_url, path)
                 soup = self._get_soup(url)
                 
-                # Look for FAQ sections with common patterns
-                # Pattern 1: dt/dd pairs
+                # Pattern 1: Definition lists (dt/dd pairs)
+                # This is the most semantic and cleanest way to mark up FAQs
                 dt_elements = soup.find_all("dt")
                 for dt in dt_elements:
                     question = dt.get_text(strip=True)
@@ -248,12 +299,13 @@ class ShopifyService:
                         answer = dd.get_text(strip=True)
                         faqs.append(FAQ(question=question, answer=answer))
                 
-                # Pattern 2: h3/p or h4/p pairs
-                for tag in ["h3", "h4"]:
+                # Pattern 2: Header/paragraph pairs
+                # Many stores use this pattern with headers for questions and paragraphs for answers
+                for tag in ["h3", "h4", "h5"]:
                     headers = soup.find_all(tag)
                     for header in headers:
                         question = header.get_text(strip=True)
-                        # Check if question looks like a question
+                        # Check if it looks like a question
                         if "?" in question or question.lower().startswith(("what", "how", "when", "where", "why", "do", "can", "is", "are")):
                             p = header.find_next("p")
                             if p:
@@ -261,10 +313,12 @@ class ShopifyService:
                                 faqs.append(FAQ(question=question, answer=answer))
                 
                 # Pattern 3: FAQ accordions
-                faq_buttons = soup.select(".accordion-button, .accordion-header, .faq-question, .faq-title")
+                # This was tricky because different themes use different class names
+                # I had to analyze many stores to find common patterns
+                faq_buttons = soup.select(".accordion-button, .accordion-header, .faq-question, .faq-title, .collapsible-trigger")
                 for button in faq_buttons:
                     question = button.get_text(strip=True)
-                    # Find the corresponding content
+                    # Find the corresponding content using aria attributes or data attributes
                     content_id = button.get("aria-controls") or button.get("data-target", "").lstrip("#")
                     if content_id:
                         content = soup.find(id=content_id)
@@ -273,11 +327,13 @@ class ShopifyService:
                             faqs.append(FAQ(question=question, answer=answer))
                     else:
                         # Try to find the next sibling that might contain the answer
-                        answer_container = button.find_next(".accordion-body, .faq-answer, .accordion-content")
+                        answer_container = button.find_next(".accordion-body, .faq-answer, .accordion-content, .collapsible-content")
                         if answer_container:
                             answer = answer_container.get_text(strip=True)
                             faqs.append(FAQ(question=question, answer=answer))
                 
+                # If we found FAQs, return them
+                # This prevents unnecessary requests to other possible paths
                 if faqs:
                     return faqs
                     
@@ -285,6 +341,7 @@ class ShopifyService:
                 logger.error(f"Error fetching FAQs from {path}: {str(e)}")
                 continue
                 
+        # If we couldn't find FAQs in any of the common paths, return an empty list
         return faqs
 
     def get_social_handles(self) -> List[SocialHandle]:

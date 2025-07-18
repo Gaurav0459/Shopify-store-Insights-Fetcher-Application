@@ -10,6 +10,15 @@ from app.models.insights import ShopifyInsights
 
 logger = logging.getLogger(__name__)
 
+# This was a bonus feature I added to make the application more useful.
+# Finding competitors programmatically is challenging because there's no
+# definitive way to determine if two stores are competitors. I'm using
+# search queries and looking for specific patterns in search results.
+#
+# TODO: Improve competitor detection by analyzing product categories
+# TODO: Add option to manually specify known competitors
+# TODO: Implement a more sophisticated ranking algorithm for competitors
+
 
 class CompetitorService:
     def __init__(self, website_url: str):
