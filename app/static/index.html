@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shopify Store Insights Fetcher</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .result-container {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        .loading {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="mb-4">Shopify Store Insights Fetcher</h1>
+        
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>Get Store Insights</h5>
+            </div>
+            <div class="card-body">
+                <form id="insightsForm">
+                    <div class="mb-3">
+                        <label for="websiteUrl" class="form-label">Shopify Store URL</label>
+                        <input type="url" class="form-control" id="websiteUrl" placeholder="https://example-store.myshopify.com" required>
+                        <div class="form-text">Enter a Shopify store URL to fetch insights</div>
+                    </div>
+                    
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" class="form-check-input" id="includeCompetitors">
+                        <label class="form-check-label" for="includeCompetitors">Include Competitor Analysis</label>
+                    </div>
+                    
+                    <div class="mb-3" id="competitorLimitContainer" style="display: none;">
+                        <label for="competitorLimit" class="form-label">Number of Competitors</label>
+                        <select class="form-select" id="competitorLimit">
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3" selected>3</option>
+                            <option value="4">4</option>
+                            <option value="5">5</option>
+                        </select>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary">Fetch Insights</button>
+                    <div class="loading mt-3">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <span class="ms-2">Fetching insights... This may take a minute.</span>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h5>Results</h5>
+            </div>
+            <div class="card-body">
+                <div class="result-container">
+                    <pre id="results" class="bg-light p-3 rounded">No results yet. Submit the form to fetch insights.</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const insightsForm = document.getElementById('insightsForm');
+            const includeCompetitors = document.getElementById('includeCompetitors');
+            const competitorLimitContainer = document.getElementById('competitorLimitContainer');
+            const resultsContainer = document.getElementById('results');
+            const loading = document.querySelector('.loading');
+            
+            // Toggle competitor limit visibility
+            includeCompetitors.addEventListener('change', function() {
+                competitorLimitContainer.style.display = this.checked ? 'block' : 'none';
+            });
+            
+            // Handle form submission
+            insightsForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const websiteUrl = document.getElementById('websiteUrl').value;
+                const includeCompetitorsChecked = includeCompetitors.checked;
+                const competitorLimit = document.getElementById('competitorLimit').value;
+                
+                // Show loading indicator
+                loading.style.display = 'block';
+                resultsContainer.textContent = 'Fetching insights...';
+                
+                try {
+                    let endpoint = '/api/v1/insights';
+                    if (includeCompetitorsChecked) {
+                        endpoint = `/api/v1/insights/competitors?limit=${competitorLimit}`;
+                    }
+                    
+                    const response = await fetch(endpoint, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            website_url: websiteUrl
+                        })
+                    });
+                    
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.detail || 'Failed to fetch insights');
+                    }
+                    
+                    const data = await response.json();
+                    resultsContainer.textContent = JSON.stringify(data, null, 2);
+                } catch (error) {
+                    resultsContainer.textContent = `Error: ${error.message}`;
+                } finally {
+                    // Hide loading indicator
+                    loading.style.display = 'none';
+                }
+            });
+        });
+    </script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
